@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Matterfront</title>
+    <title>ZBox Chat</title>
   <style>
     webview, #overlay {
       position: absolute;
@@ -56,6 +56,7 @@
                 overlay.style['z-index'] = -1;
             }
         });
+
         var handleOnline = function(first) {
             if (navigator.onLine) {
                 // TODO: add spinner/connecting icon
@@ -70,6 +71,7 @@
                 console.log('disconnected');
                 overlay.style['opacity'] = 0.5;
                 overlay.style['z-index'] = 100;
+                webview.blur();
             }
         };
 

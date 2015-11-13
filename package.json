@@ -1,5 +1,5 @@
 {
-  "name": "matterfront",
+  "name": "ZBoxChat",
   "version": "1.0.1",
   "description": "Mattermost frontend app powered by electron",
   "homepage": "https://github.com/lloeki/matterfront",
@@ -25,7 +25,12 @@
     "url": "https://github.com/lloeki/matterfront/issues"
   },
   "devDependencies": {
-    "electron-prebuilt": "^0.34.2"
+    "del": "^2.0.2",
+    "electron-prebuilt": "^0.34.2",
+    "gulp": "^3.9.0",
+    "gulp-electron": "0.0.9",
+    "gulp-ignore": "^2.0.1",
+    "gulp-jshint": "^1.12.0"
   },
   "dependencies": {
     "electron-packager": "^5.1.1"
