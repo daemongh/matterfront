@@ -3,21 +3,23 @@
 
 
     var remote = require('remote');
+    var shell = require('shell');
     var app = remote.require('app');
     var NativeImage = remote.require('native-image');
     var mainWindow = remote.getCurrentWindow();
 
     document.addEventListener('DOMContentLoaded', function () {
-        var qs = window.location.search;
-        var src = decodeURIComponent(qs.replace('?', '').split('&')[0].split('=')[1]);
-        var webview = document.querySelector('#mattermost-remote');
+        var qs = window.location.search,
+            src = decodeURIComponent(qs.replace('?', '').split('&')[0].split('=')[1]),
+            webview = document.querySelector('#mattermost-remote'),
+            overlay = document.querySelector('#overlay'),
+            loading = document.querySelector('#loading'),
+            unreadCount = 0,
+            mentionCount = 0,
+            bounceId = null,
+            pendingUpdate = null;
 
         webview.setAttribute('src', src);
-
-        var unreadCount = 0;
-        var mentionCount = 0;
-        var bounceId = null;
-        var pendingUpdate = null;
 
         webview.addEventListener('ipc-message', function (event) {
             switch (event.channel) {
@@ -48,9 +50,29 @@
 
         webview.addEventListener('console-message', function (event) {
             console.log('Mattermost: ', event.message);
+            if(event.message === "notification") {
+                mainWindow.show();
+            }
+        });
+
+        webview.addEventListener('new-window', function(e) {
+            shell.openExternal(e.url);
+        });
+
+        webview.addEventListener('did-start-loading', function(event) {
+            startLoading();
+        });
+
+        webview.addEventListener('did-stop-loading', function(event) {
+            endLoading();
         });
 
         webview.addEventListener('dom-ready', function() {
+            if (navigator.onLine) {
+                overlay.style['opacity'] = 0;
+                overlay.style['z-index'] = -1;
+            }
+
             if(webview.getUrl().indexOf('oauth.zboxapp.com') > -1) {
                 var credentials = localStorage['credentials'] ? JSON.parse(localStorage.getItem('credentials')) : null || { username: '', password: ''};
                 webview.executeJavaScript("jQuery('#username').val('"+ credentials.username +"'); \
@@ -63,6 +85,9 @@
         window.addEventListener('focus', function (e) {
             webview.focus();
         });
+
+        window.addEventListener('online', function() { handleOnline(false) } );
+        window.addEventListener('offline', function() { handleOnline(false) } );
 
         var badgeUpdate = function () {
             var newBadge = false;
@@ -136,5 +161,35 @@
                 mainWindow.setOverlayIcon(img, text);
             }
         };
+
+        var handleOnline = function(first) {
+            if (navigator.onLine) {
+                // TODO: add spinner/connecting icon
+                if (first) {
+                    console.log('connecting');
+                } else {
+                    console.log('reconnecting');
+                    setTimeout(function() { webview.reload(); }, 500);
+                }
+            } else {
+                // TODO: add offline/unplugged icon
+                console.log('disconnected');
+                overlay.style['opacity'] = 0.5;
+                overlay.style['z-index'] = 100;
+                webview.blur();
+            }
+        };
+
+        var startLoading = function() {
+            loading.style['opacity'] = 0.5;
+            loading.style['z-index'] = 100;
+        };
+
+        var endLoading = function() {
+            loading.style['opacity'] = 0;
+            loading.style['z-index'] = -1;
+        };
+
+        handleOnline(true);
     });
 })();
