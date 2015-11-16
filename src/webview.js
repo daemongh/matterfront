@@ -1,7 +1,8 @@
 (function() {
     "use strict";
 
-    var ipc = require('ipc');
+    var ipc = require('ipc'),
+        shell = require('shell');
 
     var mentionCount = 0;
     var unreadCount = 0;

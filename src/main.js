@@ -46,6 +46,28 @@ var verifyService = function(url) {
     return done.promise;
 };
 
+app.checkVersion = function(cb) {
+    request(config.oauth, function(err, response, body) {
+        if(cb && typeof cb === "function") {
+            if(err) {
+                return cb({error: true});
+            } else if (response.statusCode !== 200) {
+                return cb({error: true});
+            }
+
+            var json = JSON.parse(body);
+
+            data = {
+                min: compare(version, json.min) >= 0,
+                update: compare(version, json.current) === -1,
+                link: json.link
+            };
+
+            cb(data);
+        }
+    });
+};
+
 // Quit when all windows are closed.
 app.on('window-all-closed', function() {
     // On OS X it is common for applications and their menu bar
@@ -135,21 +157,10 @@ ipc.on('check-services', function(event) {
 });
 
 ipc.on('version', function(event) {
-    request(config.oauth, function(error, response, body) {
-        if(error) {
-            return event.sender.send('version', {error: true});
-        } else if (response.statusCode !== 200) {
+    app.checkVersion(function(data) {
+        if(data.error) {
             return event.sender.send('version', {error: true});
         }
-
-        var json = JSON.parse(body);
-
-        data = {
-            min: compare(version, json.min) >= 0,
-            update: compare(version, json.current) === -1,
-            link: json.link
-        };
-
 
         return event.sender.send('version', data);
     });

@@ -89,6 +89,21 @@
         window.addEventListener('online', function() { handleOnline(false) } );
         window.addEventListener('offline', function() { handleOnline(false) } );
 
+        setInterval(function() {
+            app.checkVersion(function(data) {
+                if(!data.min) {
+                    alert('Es necesario realizar una actualización del software para utilizar ZBox Chat\n\nImportante: La aplicación será cerrada');
+                    shell.openExternal(data.link);
+                    app.quit();
+                }
+                else if(data.update) {
+                    if(confirm('Hay una nueva versión de ZBox Chat\n ¿Quieres descargarla ahora?')) {
+                        shell.openExternal(data.link);
+                    }
+                }
+            });
+        }, (8 * 60 * 60 * 1000));
+
         var badgeUpdate = function () {
             var newBadge = false;
             if (unreadCount > 0) {

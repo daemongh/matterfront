@@ -1,6 +1,17 @@
-var remote = require('remote');
-var app = remote.require('app');
-var Menu = remote.require('menu');
+var remote = require('remote'),
+    app = remote.require('app'),
+    Menu = remote.require('menu'),
+    shell = require('shell'),
+    name = app.getName();
+
+var clearCredentials = function() {
+    var webview = document.querySelector('#mattermost-remote');
+    localStorage.removeItem('credentials');
+    if(webview.getUrl().indexOf('oauth.zboxapp.com') > -1) {
+        webview.executeJavaScript("jQuery('#username').val(''); \ " +
+            "jQuery('#password').val('');");
+    }
+};
 
 var template = [
     {
@@ -102,20 +113,49 @@ var template = [
         submenu: [
             {
                 label: 'Conocer más',
-                click: function() { require('shell').openExternal('http://zboxapp.com'); }
+                click: function() { shell.openExternal('http://zboxapp.com'); }
+            },
+            {
+                label: 'Verificar actualizaciones',
+                click: function(item, focusedWindow) {
+                    app.checkVersion(function(data) {
+                        if(data.error) {
+                            return alert('Ocurrió un error comprobando la versión del software.');
+                        } else if(!data.min) {
+                            alert('Es necesario realizar una actualización del software para utilizar ZBox Chat\n\nImportante: La aplicación será cerrada');
+                            shell.openExternal(data.link);
+                            app.quit();
+                        }
+                        else if(data.update) {
+                            if(confirm('Hay una nueva versión de ZBox Chat\n ¿Quieres descargarla ahora?')) {
+                                shell.openExternal(data.link);
+                            }
+                        } else {
+                            alert("No hay nuevas actualizaciones");
+                        }
+                    });
+                }
             }
+
         ]
     }
 ];
 
 if (process.platform == 'darwin') {
-    var name = app.getName();
     template.unshift({
         label: name,
         submenu: [
             {
                 label: 'Acerca ' + name,
                 role: 'about'
+            },
+            {
+                type: 'separator'
+            },
+            {
+                label: 'Limpiar credenciales',
+                accelerator: 'Command+Shift+L',
+                click: clearCredentials
             },
             {
                 type: 'separator'
@@ -162,6 +202,25 @@ if (process.platform == 'darwin') {
             role: 'front'
         }
     );
+} else {
+    template.unshift({
+        label: 'Archivo',
+        submenu: [
+            {
+                label: 'Limpiar credenciales',
+                accelerator: 'Ctrl+Shift+L',
+                click: clearCredentials
+            },
+            {
+                type: 'separator'
+            },
+            {
+                label: 'Salir',
+                accelerator: 'Alt+Q',
+                click: function() { app.quit(); }
+            }
+        ]
+    });
 }
 
 menu = Menu.buildFromTemplate(template);
