@@ -30,7 +30,7 @@ gulp.task('build', function() {
             packageJson: packageJson,
             release: './release',
             cache: './cache',
-            version: 'v0.34.3',
+            version: 'v0.35.0',
             packaging: true,
             platforms: ['win32-ia32', 'win32-x64', 'darwin-x64', 'linux-x64'],
             asar: true,
