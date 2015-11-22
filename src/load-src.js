@@ -79,14 +79,13 @@
 
         webview.addEventListener('dom-ready', function() {
             if (navigator.onLine) {
-                overlay.style['opacity'] = 0;
+                overlay.style.opacity = 0;
                 overlay.style['z-index'] = -1;
             }
 
             if(webview.getUrl().indexOf('oauth.zboxapp.com') > -1) {
-                var credentials = localStorage['credentials'] ? JSON.parse(localStorage.getItem('credentials')) : null || { username: '', password: ''};
-                webview.executeJavaScript("jQuery('#username').val('"+ credentials.username +"'); \
-                jQuery('#password').val('"+ credentials.password +"');");
+                var credentials = localStorage.credentials ? JSON.parse(localStorage.getItem('credentials')) : null || { username: '', password: ''};
+                webview.executeJavaScript("jQuery('#username').val('"+ credentials.username +"'); jQuery('#password').val('"+ credentials.password +"');");
             }
         });
 
@@ -96,8 +95,8 @@
             webview.focus();
         });
 
-        window.addEventListener('online', function() { handleOnline(false) } );
-        window.addEventListener('offline', function() { handleOnline(false) } );
+        window.addEventListener('online', function() { handleOnline(false); } );
+        window.addEventListener('offline', function() { handleOnline(false); } );
 
         setInterval(function() {
             app.checkVersion(false);
@@ -188,19 +187,19 @@
             } else {
                 // TODO: add offline/unplugged icon
                 console.log('disconnected');
-                overlay.style['opacity'] = 0.5;
+                overlay.style.opacity = 0.5;
                 overlay.style['z-index'] = 100;
                 webview.blur();
             }
         };
 
         var startLoading = function() {
-            loading.style['opacity'] = 0.5;
+            loading.style.opacity = 0.5;
             loading.style['z-index'] = 100;
         };
 
         var endLoading = function() {
-            loading.style['opacity'] = 0;
+            loading.style.opacity = 0;
             loading.style['z-index'] = -1;
         };
 
