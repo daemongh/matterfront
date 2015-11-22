@@ -1,12 +1,15 @@
-var app = require('app'),
-    BrowserWindow = require('browser-window'),
-    NativeImage = require('native-image'),
+var app = require('electron').app,
+    BrowserWindow = require('electron').BrowserWindow,
+    NativeImage = require('electron').nativeImage,
+    updater = require('electron').autoUpdater,
+    ipc = require('electron').ipcMain,
+    os = require('os'),
+    url = require('url'),
     path = require('path'),
     fs = require('fs'),
     request = require('request'),
     Q = require('q'),
-    ipc = require('ipc'),
-    compare = require('version-comparison'),
+    appName = require('./package.json').name,
     version = require('./package.json').version;
 // Report crashes to our server.
 
@@ -19,6 +22,10 @@ var mainWindow = null,
     quitting = false,
     isValid = false,
     src = null,
+    platform = null,
+    updateAvailable = false,
+    updateReady = false,
+    manualCheck = false,
     config = {},
     configPaths = [
         path.join('.', 'config.json'),
@@ -29,11 +36,99 @@ var mainWindow = null,
     appIcon = NativeImage.createFromPath(path.join(__dirname, '../resources/mattermost.ico'));
 
 
+for (; --i >= 0;) {
+    try {
+        config = JSON.parse(fs.readFileSync(configPaths[i]));
+        break;
+    } catch(e) {
+        if (e instanceof Error && e.code === 'ENOENT') {
+            // next
+        } else { throw e; }
+    }
+}
+
+var handleStartupEvent = function() {
+    var desktopShortcut, updatePath, dir, file;
+
+    if (process.platform !== 'win32') {
+        return false;
+    }
+
+    app.setAppUserModelId('com.squirrel.ZBoxChat.ZBoxChat');
+
+    desktopShortcut = path.join(process.env.USERPROFILE, 'Desktop/ZboxChat.lnk');
+    dir = path.join(process.env.USERPROFILE, '/AppData/Local/', appName, 'app-' + version);
+    updatePath = path.join(dir, '../Update.exe');
+    file = path.join(dir, appName + '.exe');
+
+    //var logger = require('./logger')(module);
+
+    function createShortcut() {
+        var ws, spawn;
+        try {
+            ws = require("windows-shortcuts");
+        } catch (err) {
+            return;
+        }
+
+        ws.query(desktopShortcut, function(err, info) {
+            if(err || info.target !== file) {
+                spawn = require('child_process');
+                spawn.exec(updatePath + ' --createShortcut ' + appName + '.exe');
+            }
+        });
+    }
+
+    function deleteShortcut() {
+        try {
+            fs.unlinkSync(desktopShortcut);
+        } catch(err) {}
+    }
+
+    var squirrelCommand = process.argv[1];
+    switch (squirrelCommand) {
+        case '--squirrel-firstrun':
+            createShortcut();
+            break;
+        case '--squirrel-install':
+        case '--squirrel-updated':
+            deleteShortcut();
+            createShortcut();
+            app.quit();
+
+            return true;
+        case '--squirrel-uninstall':
+            // Undo anything you did in the --squirrel-install and
+            // --squirrel-updated handlers
+
+            // Always quit when done
+            deleteShortcut();
+            app.quit();
+
+            return true;
+        case '--squirrel-obsolete':
+            // This is called on the outgoing version of your app before
+            // we update to the new version - it's the opposite of
+            // --squirrel-updated
+            app.quit();
+            return true;
+    }
+
+    if(!squirrelCommand) {
+        createShortcut();
+    }
+};
+
+if (handleStartupEvent()) {
+    return;
+}
+
 var verifyService = function(url) {
     var done = Q.defer();
     request({
         url: url,
-        method: 'HEAD'
+        method: 'HEAD',
+        strictSSL: false
     }, function(error, response) {
         if(error) {
             return done.reject();
@@ -46,27 +141,54 @@ var verifyService = function(url) {
     return done.promise;
 };
 
-app.checkVersion = function(cb) {
-    request(config.oauth, function(err, response, body) {
-        if(cb && typeof cb === "function") {
-            if(err) {
-                return cb({error: true});
-            } else if (response.statusCode !== 200) {
-                return cb({error: true});
-            }
+platform = process.platform + '-' + process.arch;
+updater.setFeedURL(url.resolve(config.oauth, 'version/chatDesktop/' + version + '/' + platform));
 
-            var json = JSON.parse(body);
-
-            data = {
-                min: compare(version, json.min) >= 0,
-                update: compare(version, json.current) === -1,
-                link: json.link
-            };
-
-            cb(data);
-        }
-    });
+app.checkVersion = function(manual) {
+    manualCheck = manual;
+    updater.checkForUpdates();
 };
+
+updater.on('error', function(err) {
+    var msg = "Ocurrió un error al verificar si existen actualizaciones";
+    if(manualCheck) {
+        if (splashWindow) {
+            splashWindow.webContents.send('update-error', msg);
+        } else if (mainWindow) {
+            mainWindow.webContents.send('update-error', msg);
+        }
+    }
+});
+
+updater.on('checking-for-update', function() {
+    console.log('checking-for-update');
+});
+
+updater.on('update-available', function() {
+    if(splashWindow) {
+        updateAvailable = true;
+        isValid = true;
+        splashWindow.close();
+    }
+});
+
+updater.on('update-not-available', function() {
+    if (mainWindow && manualCheck) {
+        mainWindow.webContents.send('no-update');
+    } else if(splashWindow) {
+        isValid = true;
+        splashWindow.close();
+    }
+});
+
+updater.on('update-downloaded', function() {
+    if(splashWindow) {
+        splashWindow.webContents.send('update-ready');
+    } else if (mainWindow) {
+        mainWindow.webContents.send('update-ready');
+    }
+    updateReady = true;
+});
 
 // Quit when all windows are closed.
 app.on('window-all-closed', function() {
@@ -81,18 +203,7 @@ app.on('ready', function() {
     splashWindow = new BrowserWindow({width:600, height: 307, icon: appIcon, frame: false, 'skip-taskbar': true, transparent: true});
     mainWindow = new BrowserWindow({width: 1024, height: 600, icon: appIcon, frame: true, show: false});
 
-    splashWindow.loadUrl('file://' + __dirname + '/splash.html');
-
-    for (; --i >= 0;) {
-        try {
-            config = JSON.parse(fs.readFileSync(configPaths[i]));
-            break;
-        } catch(e) {
-            if (e instanceof Error && e.code === 'ENOENT') {
-                // next
-            } else { throw e; }
-        }
-    }
+    splashWindow.loadURL('file://' + __dirname + '/splash.html');
 
     src = config.url || 'file://' + __dirname + '/nosrc.html';
 
@@ -104,9 +215,12 @@ app.on('ready', function() {
 
     splashWindow.on('closed', function() {
         splashWindow = null;
+        if(mainWindow && updateAvailable && updateReady) {
+            mainWindow.webContents.send('update-ready');
+        }
     });
 
-    mainWindow.loadUrl('file://' + __dirname + '/index.html' + '?src=' + encodeURIComponent(src));
+    mainWindow.loadURL('file://' + __dirname + '/index.html' + '?src=' + encodeURIComponent(src));
 
     mainWindow.on('close', function (e) {
         if (process.platform != 'darwin') {
@@ -128,6 +242,8 @@ app.on('ready', function() {
         mainWindow = null;
     });
 
+    require('./menu');
+
 });
 
 app.on('activate', function(e, hasVisibleWindows) {
@@ -147,7 +263,7 @@ app.on('before-quit', function(e) {
 });
 
 ipc.on('check-services', function(event) {
-    Q.all([ verifyService(config.oauth), verifyService(config.url) ])
+    Q.all([ verifyService(url.resolve(config.oauth, 'status')), verifyService(config.url) ])
         .then(function() {
             return event.sender.send('service-status', true);
         })
@@ -156,21 +272,17 @@ ipc.on('check-services', function(event) {
         });
 });
 
-ipc.on('version', function(event) {
-    app.checkVersion(function(data) {
-        if(data.error) {
-            return event.sender.send('version', {error: true});
-        }
-
-        return event.sender.send('version', data);
-    });
+ipc.on('install', function() {
+    updateAvailable = false;
+    updateReady = false;
+    updater.quitAndInstall();
+    app.quit();
 });
 
 ipc.on('exit', function() {
     app.quit();
 });
 
-ipc.on('open', function() {
-    isValid = true;
-    splashWindow.close();
+ipc.on('version', function() {
+    app.checkVersion(false);
 });

@@ -1,14 +1,19 @@
 {
   "name": "ZBoxChat",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "main.js",
+  "description": "Mattermost frontend app powered by electron",
+  "author": "Brian Vanderbusch <brian@hackerhappyhour.com> (https://github.com/H3Chief)",
+  "license": "MIT",
   "devDependencies": {
     "electron-packager": "^5.1.0",
     "electron-prebuilt": "^0.34.1"
   },
   "dependencies": {
     "q": "^1.4.1",
-    "request": "^2.65.0",
-    "version-comparison": "^1.0.2"
+    "request": "^2.65.0"
+  },
+  "optionalDependencies": {
+    "windows-shortcuts": "^0.1.1"
   }
 }

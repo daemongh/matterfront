@@ -1,5 +1,5 @@
-var ipc = require('ipc'),
-    shell = require('shell');
+var ipc = require('electron').ipcRenderer,
+    shell = require('electron').shell;
 
 $(document).ready(function() {
     var body = $('body'),
@@ -63,19 +63,14 @@ $(document).ready(function() {
         }
     });
 
-    ipc.on('version', function(data) {
-        if(data.error) {
-            return exitWithError('Ocurrió un error comprobando la versión del software.');
-        } else if(!data.min) {
-            alert('Es necesario realizar una actualización del software para utilizar ZBox Chat');
-            shell.openExternal(data.link);
-            return exitWithError("Ingresa nuevamente una vez hayas instalado la actualización.", 5000);
-        } else if(data.update) {
-            if(confirm('Hay una nueva versión de ZBox Chat\n ¿Quieres descargarla ahora?')) {
-                shell.openExternal(data.link);
-            }
+    ipc.on('update-error', function(msg) {
+        alert(msg);
+    });
+
+    ipc.on('update-ready', function() {
+        if(confirm('Hay una nueva versión de ZBox Chat\n ¿Quieres instalarla ahora?')) {
+            ipc.send('install');
         }
-        ipc.send('open');
     });
 
     window.addEventListener('online', handleOnline );

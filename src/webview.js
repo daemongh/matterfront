@@ -1,8 +1,8 @@
 (function() {
     "use strict";
 
-    var ipc = require('ipc'),
-        shell = require('shell');
+    var ipc = require('electron').ipcRenderer,
+        shell = require('electron').shell;
 
     var mentionCount = 0;
     var unreadCount = 0;

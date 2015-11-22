@@ -1,7 +1,6 @@
-var remote = require('remote'),
-    app = remote.require('app'),
-    Menu = remote.require('menu'),
-    shell = require('shell'),
+var shell = require('electron').shell,
+    app = require('electron').app,
+    Menu = require('electron').Menu,
     name = app.getName();
 
 var clearCredentials = function() {
@@ -75,20 +74,20 @@ var template = [
                     if (focusedWindow)
                         focusedWindow.setFullScreen(!focusedWindow.isFullScreen());
                 }
+            },
+            {
+                label: 'Toggle Developer Tools',
+                accelerator: (function() {
+                    if (process.platform == 'darwin')
+                        return 'Alt+Command+I';
+                    else
+                        return 'Ctrl+Shift+I';
+                })(),
+                click: function(item, focusedWindow) {
+                    if (focusedWindow)
+                        focusedWindow.toggleDevTools();
+                }
             }
-            //{
-            //    label: 'Toggle Developer Tools',
-            //    accelerator: (function() {
-            //        if (process.platform == 'darwin')
-            //            return 'Alt+Command+I';
-            //        else
-            //            return 'Ctrl+Shift+I';
-            //    })(),
-            //    click: function(item, focusedWindow) {
-            //        if (focusedWindow)
-            //            focusedWindow.toggleDevTools();
-            //    }
-            //}
         ]
     },
     {
@@ -118,22 +117,7 @@ var template = [
             {
                 label: 'Verificar actualizaciones',
                 click: function(item, focusedWindow) {
-                    app.checkVersion(function(data) {
-                        if(data.error) {
-                            return alert('Ocurrió un error comprobando la versión del software.');
-                        } else if(!data.min) {
-                            alert('Es necesario realizar una actualización del software para utilizar ZBox Chat\n\nImportante: La aplicación será cerrada');
-                            shell.openExternal(data.link);
-                            app.quit();
-                        }
-                        else if(data.update) {
-                            if(confirm('Hay una nueva versión de ZBox Chat\n ¿Quieres descargarla ahora?')) {
-                                shell.openExternal(data.link);
-                            }
-                        } else {
-                            alert("No hay nuevas actualizaciones");
-                        }
-                    });
+                    app.checkVersion(true);
                 }
             }
 
@@ -223,5 +207,5 @@ if (process.platform == 'darwin') {
     });
 }
 
-menu = Menu.buildFromTemplate(template);
+var menu = Menu.buildFromTemplate(template);
 Menu.setApplicationMenu(menu);

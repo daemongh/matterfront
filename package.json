@@ -1,6 +1,6 @@
 {
   "name": "ZBoxChat",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Mattermost frontend app powered by electron",
   "homepage": "https://github.com/lloeki/matterfront",
   "author": "Brian Vanderbusch <brian@hackerhappyhour.com> (https://github.com/H3Chief)",
@@ -26,7 +26,9 @@
   },
   "devDependencies": {
     "del": "^2.1.0",
-    "electron-prebuilt": "^0.35.0",
+    "electron-prebuilt": "0.35.0",
+    "grunt": "^0.4.5",
+    "grunt-electron-installer": "^1.1.0",
     "gulp": "^3.9.0",
     "gulp-electron": "0.0.9",
     "gulp-ignore": "^2.0.1",

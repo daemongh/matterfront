@@ -2,13 +2,49 @@
  * Created by enahum on 11/10/15.
  */
 var gulp = require('gulp'),
-    electron = require('gulp-electron'),
+    packager = require('electron-packager'),
     packageJson = require('./package.json'),
     jshint = require('gulp-jshint'),
     del = require('del'),
     ignore = require('gulp-ignore');
 
 process.NODE_ENV = 'production';
+
+function makePackage(platform, arch) {
+    var packageJson = require('./src/package.json');
+    packager({
+        dir: './src',
+        name: packageJson.name,
+        platform: platform,
+        arch: arch,
+        version: '0.35.0',
+        out: './release',
+        cache: './cache',
+        sign: 'bruna',
+        prune: true,
+        overwrite: true,
+        "app-version": packageJson.version,
+        "app-bundle-id": "com.zboxapp.chat",
+        "build-version": packageJson.version,
+        'version-string': {
+            ProductName: packageJson.name,
+            CompanyName: 'ZBox Spa',
+            ProductVersion: packageJson.version,
+            FileDescription: packageJson.name,
+            OriginalFilename: packageJson.name + '.exe',
+            LegalCopyright: 'Copyright (C) 2015. ZBox Spa. Todos los derechos reservados',
+            SquirrelAwareVersion: '1'
+        },
+        icon: 'resources/zbox'
+    }, function(err, appPath) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log('done');
+        }
+    });
+}
 
 gulp.task('lint', function() {
     return gulp.src('./src/*.js')
@@ -23,34 +59,40 @@ gulp.task('clean', function(done) {
     return done();
 });
 
-gulp.task('build', function() {
-    return gulp.src("")
-        .pipe(electron({
-            src: './src',
-            packageJson: packageJson,
-            release: './release',
-            cache: './cache',
-            version: 'v0.35.0',
-            packaging: true,
-            platforms: ['win32-ia32', 'win32-x64', 'darwin-x64', 'linux-x64'],
-            asar: true,
-            platformResources: {
-                darwin: {
-                    CFBundleDisplayName: packageJson.name,
-                    CFBundleIdentifier: packageJson.name,
-                    CFBundleName: packageJson.name,
-                    CFBundleVersion: packageJson.version,
-                    icon: './resources/zbox.icns'
-                },
-                win: {
-                    "version-string": packageJson.version,
-                    "file-version": packageJson.version,
-                    "product-version": packageJson.version,
-                    "icon": './resources/zbox.ico'
-                }
-            }
-        }))
-        .pipe(gulp.dest(""));
+gulp.task('package', ['sync-meta'], function() {
+    makePackage('all', 'all');
 });
 
-gulp.task('default', ['clean', 'build']);
+gulp.task('package:windows', ['sync-meta'], function() {
+    makePackage('win32', 'all');
+});
+
+gulp.task('package:windows:x64', ['sync-meta'], function() {
+    makePackage('win32', 'x64');
+});
+
+gulp.task('package:windows:ia32', ['sync-meta'], function() {
+    makePackage('win32', 'ia32');
+});
+
+gulp.task('package:osx', ['sync-meta'], function() {
+    makePackage('darwin', 'all');
+});
+
+gulp.task('package:linux', ['sync-meta'], function() {
+    makePackage('linux', 'all');
+});
+
+gulp.task('sync-meta', function() {
+    var appPackageJson = require('./src/package.json');
+    var packageJson = require('./package.json');
+    appPackageJson.name = packageJson.name;
+    appPackageJson.version = packageJson.version;
+    appPackageJson.description = packageJson.description;
+    appPackageJson.author = packageJson.author;
+    appPackageJson.license = packageJson.license;
+    var fs = require('fs');
+    fs.writeFileSync('./src/package.json', JSON.stringify(appPackageJson, null, '  ') + '\n');
+});
+
+gulp.task('default', ['lint', 'clean', 'package']);

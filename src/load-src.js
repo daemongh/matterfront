@@ -1,11 +1,11 @@
 (function() {
     "use strict";
 
-
-    var remote = require('remote');
-    var shell = require('shell');
-    var app = remote.require('app');
-    var NativeImage = remote.require('native-image');
+    var remote = require('electron').remote;
+    var shell = require('electron').shell;
+    var ipc = require('electron').ipcRenderer;
+    var app = remote.app;
+    var NativeImage = remote.nativeImage;
     var mainWindow = remote.getCurrentWindow();
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -46,6 +46,16 @@
             }
 
             pendingUpdate = setTimeout(badgeUpdate, 500);
+        });
+
+        ipc.on('update-ready', function() {
+            if(confirm('Hay una nueva versión de ZBox Chat\n ¿Quieres instalarla ahora?')) {
+                ipc.send('install');
+            }
+        });
+
+        ipc.on('no-update', function() {
+            alert("Actualmente tienes la última versión del software");
         });
 
         webview.addEventListener('console-message', function (event) {
@@ -90,18 +100,7 @@
         window.addEventListener('offline', function() { handleOnline(false) } );
 
         setInterval(function() {
-            app.checkVersion(function(data) {
-                if(!data.min) {
-                    alert('Es necesario realizar una actualización del software para utilizar ZBox Chat\n\nImportante: La aplicación será cerrada');
-                    shell.openExternal(data.link);
-                    app.quit();
-                }
-                else if(data.update) {
-                    if(confirm('Hay una nueva versión de ZBox Chat\n ¿Quieres descargarla ahora?')) {
-                        shell.openExternal(data.link);
-                    }
-                }
-            });
+            app.checkVersion(false);
         }, (8 * 60 * 60 * 1000));
 
         var badgeUpdate = function () {
