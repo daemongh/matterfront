@@ -8,6 +8,8 @@
     var NativeImage = remote.nativeImage;
     var mainWindow = remote.getCurrentWindow();
 
+    document.title = app.getName() + ' ' + app.getVersion();
+
     document.addEventListener('DOMContentLoaded', function () {
         var qs = window.location.search,
             src = decodeURIComponent(qs.replace('?', '').split('&')[0].split('=')[1]),
@@ -87,6 +89,10 @@
                 var credentials = localStorage.credentials ? JSON.parse(localStorage.getItem('credentials')) : null || { username: '', password: ''};
                 webview.executeJavaScript("jQuery('#username').val('"+ credentials.username +"'); jQuery('#password').val('"+ credentials.password +"');");
             }
+        });
+
+        webview.addEventListener('crashed', function() {
+            webview.reloadIgnoringCache();
         });
 
         // Keep the focus on the webview.
